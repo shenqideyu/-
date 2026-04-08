@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FBL定制 - 限定标版</title>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", sans-serif; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #f8fafc; min-height: 100vh; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; background: rgba(30,41,59,0.95); border-radius: 20px; padding: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+        .header { text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #3b82f6; }
+        .title { font-size: 1.6rem; font-weight: 800; background: linear-gradient(90deg, #60a5fa, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .subtitle { font-size: 0.8rem; opacity: 0.7; margin-top: 8px; }
+        .badge-section { background: rgba(15,23,42,0.8); border-radius: 14px; padding: 15px; margin-bottom: 15px; }
+        .badge-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; color: #60a5fa; }
+        .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; padding: 8px; background: #172540; border-radius: 10px; }
+        .badge-item { background: #1e293b; border: 2px solid transparent; border-radius: 8px; padding: 6px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .badge-item:hover { border-color: #3b82f6; }
+        .badge-item.selected { border-color: #f59e0b; }
+        .badge-thumb { width: 100%; height: 28px; object-fit: contain; }
+        .badge-name { font-size: 0.55rem; color: #94a3b8; margin-top: 3px; }
+        .upload-area { 
+            background: rgba(15,23,42,0.8); 
+            border: 2px dashed #3b82f6; 
+            border-radius: 14px; 
+            padding: 30px 15px; 
+            text-align: center; 
+            margin-bottom: 15px; 
+            cursor: pointer;
+            display: block;
+        }
+        .upload-area:hover { border-color: #60a5fa; background: rgba(23,37,64,0.8); }
+        .upload-btn { 
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8); 
+            border: none; 
+            padding: 12px 30px; 
+            border-radius: 25px; 
+            color: white; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-bottom: 10px; 
+            font-size: 1rem;
+            pointer-events: none;
+        }
+        .file-input { display: none; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 15px; }
+        .action-btn { padding: 8px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+        .primary-btn { background: #3b82f6; color: white; }
+        .secondary-btn { background: #475569; color: white; }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 280px; overflow-y: auto; padding: 8px; background: rgba(15,23,42,0.8); border-radius: 10px; margin-bottom: 15px; }
+        .img-card { background: #1e293b; border-radius: 10px; padding: 5px; text-align: center; border: 2px solid transparent; cursor: pointer; position: relative; }
+        .img-card.selected { border-color: #3b82f6; }
+        .img-thumb { width: 100%; aspect-ratio: 9/14; object-fit: cover; border-radius: 6px; background: #000; }
+        .img-name { font-size: 0.6rem; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #94a3b8; }
+        .remove-btn { position: absolute; top: -4px; right: -4px; background: #ef4444; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; }
+        .preview-area { text-align: center; margin-bottom: 15px; }
+        .preview-canvas { max-width: 150px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); aspect-ratio: 9/14; }
+        .progress-wrap { height: 5px; background: #334155; border-radius: 10px; overflow: hidden; margin-bottom: 10px; display: none; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+        .status-text { text-align: center; font-size: 0.8rem; color: #94a3b8; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0f172a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        .info { background: #172540; border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; font-size: 0.7rem; color: #94a3b8; }
+        .info strong { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">FBL定制 · 限定标版</div>
+            <div class="subtitle">9:14比例 | 3600×5600超清 | 限定标居中偏下</div>
+        </div>
+
+        <div class="badge-section">
+            <div class="badge-title">🏷️ 选择限定标</div>
+            <div class="info">位置：<strong>中心偏下</strong> | 大小：<strong>图片宽度85%</strong></div>
+            <div class="badge-grid" id="badgeGrid">
+                <div class="badge-item selected" data-badge="none">
+                    <div style="height:28px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">❌</div>
+                    <div class="badge-name">无</div>
+                </div>
+            </div>
+        </div>
+
+        <label for="fileInput" class="upload-area" id="uploadArea">
+            <input type="file" id="fileInput" class="file-input" accept="image/*" multiple>
+            <button class="upload-btn" type="button">📤 选择图片</button>
+            <div style="font-size:0.9rem;opacity:0.7">支持JPG/PNG/WEBP，可多选</div>
+        </label>
+
+        <div class="btn-group">
+            <button id="singleGenBtn" class="action-btn secondary-btn" disabled>✨ 单张</button>
+            <button id="batchGenBtn" class="action-btn primary-btn" disabled>📦 批量</button>
+            <button id="clearBtn" class="action-btn secondary-btn">清空</button>
+        </div>
+
+        <div class="preview-area">
+            <canvas id="previewCanvas" width="270" height="420"></canvas>
+        </div>
+
+        <div class="progress-wrap" id="progressWrap"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="status-text" id="statusText">选择限定标，上传图片开始</div>
+
+        <div class="image-grid" id="imageGrid"></div>
+    </div>
+
+    <script>
+const BADGE_DATA = {
+    'badge_01': { name: '荣耀典藏', data: 'https://shenqideyu-1309822099.cos.ap-nanjing.myqcloud.com/网站/海报/图标/荣耀典藏.png' },
+    'badge_02': { name: '情人节限定', data: 'https://shenqideyu-1309822099.cos.ap-nanjing.myqcloud.com/网站/海报/图标/情人节限定.png' },
+    'badge_03': { name: '珍品传说', data: 'https://shenqideyu-1309822099.cos.ap-nanjing.myqcloud.com/网站/海报/图标/珍品传说.png' },
+    'badge_04': { name: '无双限定', data: 'https://shenqideyu-1309822099.cos.ap-nanjing.myqcloud.com/网站/海报/图标/无双限定.png' },
+    'badge_05': { name: '无双限定2', data: 'https://shenqideyu-1309822099.cos.ap-nanjing.myqcloud.com/网站/海报/图标/无双限定2.png' },
+};
+
+(function(){
+    const W = 3600, H = 5600, R = W/H, MIN_MB = 12, MAX_MB = 15;
+    let list = [], sel = null, proc = false, badge = 'none', imgs = {};
+    const $ = id => document.getElementById(id);
+    const canvas = $('previewCanvas'), ctx = canvas.getContext('2d');
+    
+    function loadBadges() {
+        Object.keys(BADGE_DATA).forEach(k => {
+            const i = new Image();
+            i.crossOrigin = 'Anonymous';
+            i.onload = () => {
+                imgs[k] = i;
+                const d = document.createElement('div');
+                d.className = 'badge-item';
+                d.dataset.badge = k;
+                d.innerHTML = `<img class="badge-thumb" src="${BADGE_DATA[k].data}"><div class="badge-name">${BADGE_DATA[k].name}</div>`;
+                $('badgeGrid').appendChild(d);
+            };
+            i.onerror = () => console.warn(`徽章加载失败: ${BADGE_DATA[k].name}`);
+            i.src = BADGE_DATA[k].data;
+        });
+    }
+
+    function loadImg(f) {
+        return new Promise((res, rej) => {
+            const i = new Image();
+            i.onload = () => res({img: i, url: URL.createObjectURL(f)});
+            i.onerror = rej;
+            i.src = URL.createObjectURL(f);
+        });
+    }
+
+    function draw(c, img, w, h, bid) {
+        const x = c.getContext('2d');
+        c.width = w; c.height = h;
+        let sx = 0, sy = 0, sw = img.width, sh = img.height;
+        const r = img.width / img.height;
+        if (r > R) { sw = img.height * R; sx = (img.width - sw) / 2; }
+        else { sh = img.width / R; sy = (img.height - sh) / 2; }
+        x.clearRect(0, 0, w, h);
+        x.imageSmoothingEnabled = true;
+        x.imageSmoothingQuality = 'high';
+        x.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+        
+        if (bid && bid !== 'none' && imgs[bid]) {
+            const bi = imgs[bid];
+            const bw = w * 0.85;
+            const bh = bw * (bi.height / bi.width);
+            const bx = (w - bw) / 2;
+            const by = (h / 2) + (h * 0.05);
+            x.drawImage(bi, bx, by, bw, bh);
+        }
+    }
+
+    function noise(d, s) {
+        const a = new Uint8ClampedArray(d.data);
+        for (let i = 0; i < a.length; i += 4) {
+            if (Math.random() < 0.5) {
+                const dl = (Math.random() - 0.5) * s;
+                a[i] = Math.min(255, Math.max(0, a[i] + dl));
+                a[i+1] = Math.min(255, Math.max(0, a[i+1] + dl * 0.75));
+                a[i+2] = Math.min(255, Math.max(0, a[i+2] + dl * 0.8));
+            }
+        }
+        return new ImageData(a, d.width, d.height);
+    }
+
+    function quant(d, st) {
+        const a = new Uint8ClampedArray(d.data);
+        for (let i = 0; i < a.length; i += 4) {
+            a[i] = Math.round(a[i] / st) * st;
+            a[i+1] = Math.round(a[i+1] / st) * st;
+            a[i+2] = Math.round(a[i+2] / st) * st;
+        }
+        return new ImageData(a, d.width, d.height);
+    }
+
+    async function toBlob(d) {
+        return new Promise(r => {
+            const c = document.createElement('canvas');
+            c.width = d.width; c.height = d.height;
+            c.getContext('2d').putImageData(d, 0, 0);
+            c.toBlob(r, 'image/png', 1.0);
+        });
+    }
+
+    async function adjust(c) {
+        const t = document.createElement('canvas');
+        t.width = c.width; t.height = c.height;
+        const x = t.getContext('2d');
+        x.drawImage(c, 0, 0);
+        let d = x.getImageData(0, 0, t.width, t.height);
+        let b = await toBlob(d), m = b.size / 1048576;
+        if (m >= MIN_MB && m <= MAX_MB) return b;
+        if (m < MIN_MB) {
+            for (let s = 2; s <= 20; s += 2.5) {
+                const nb = await toBlob(noise(d, s));
+                m = nb.size / 1048576;
+                if (m >= MIN_MB && m <= MAX_MB) return nb;
+            }
+            return await toBlob(noise(d, 18));
+        }
+        for (let st = 2; st <= 14; st += 2) {
+            const nb = await toBlob(quant(d, st));
+            m = nb.size / 1048576;
+            if (m >= MIN_MB && m <= MAX_MB) return nb;
+        }
+        return await toBlob(quant(d, 10));
+    }
+
+    async function gen(img, bid) {
+        const c = document.createElement('canvas');
+        draw(c, img, W, H, bid);
+        return await adjust(c);
+    }
+
+    function preview() {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, 270, 420);
+        if (!sel) {
+            ctx.fillStyle = '#666';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('预览', 135, 200);
+            return;
+        }
+        const o = list.find(i => i.id === sel);
+        if (o) draw(canvas, o.img, 270, 420, badge);
+    }
+
+    function render() {
+        const g = $('imageGrid');
+        g.innerHTML = list.length ? '' : '<div style="grid-column:1/-1;text-align:center;padding:25px;color:#666;font-size:0.8rem;">暂无图片</div>';
+        $('singleGenBtn').disabled = !sel || proc;
+        $('batchGenBtn').disabled = !list.length || proc;
+        list.forEach(it => {
+            const c = document.createElement('div');
+            c.className = 'img-card' + (it.id === sel ? ' selected' : '');
+            c.innerHTML = `<img class="img-thumb" src="${it.url}"><div class="img-name">${it.name}</div><div class="remove-btn">×</div>`;
+            c.onclick = e => {
+                if (e.target.classList.contains('remove-btn')) {
+                    URL.revokeObjectURL(it.url);
+                    list = list.filter(i => i.id !== it.id);
+                    if (sel === it.id) sel = list[0]?.id || null;
+                    render(); preview();
+                } else { sel = it.id; render(); preview(); }
+            };
+            g.appendChild(c);
+        });
+    }
+
+    $('badgeGrid').onclick = e => {
+        const it = e.target.closest('.badge-item');
+        if (!it) return;
+        if (it.dataset.badge === badge) {
+            badge = 'none';
+            $('badgeGrid').querySelector('[data-badge="none"]').classList.add('selected');
+            it.classList.remove('selected');
+        } else {
+            $('badgeGrid').querySelectorAll('.badge-item').forEach(el => el.classList.remove('selected'));
+            it.classList.add('selected');
+            badge = it.dataset.badge;
+        }
+        preview();
+        $('statusText').innerText = badge === 'none' ? '已取消' : `已选：${BADGE_DATA[badge]?.name}`;
+    };
+
+    // ========== 已删除重复触发的 uploadArea 点击监听 ==========
+
+    $('fileInput').onchange = async e => {
+        const fs = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+        for (const f of fs) {
+            try {
+                const {img, url} = await loadImg(f);
+                list.push({id: Date.now() + Math.random().toString(36).slice(2), name: f.name, img, url});
+                if (!sel) sel = list[list.length - 1].id;
+            } catch (err) {
+                console.error('图片加载失败:', err);
+            }
+        }
+        render(); preview();
+        $('statusText').innerText = `已加载${fs.length}张`;
+        e.target.value = '';
+    };
+
+    $('clearBtn').onclick = () => {
+        list.forEach(i => URL.revokeObjectURL(i.url));
+        list = []; sel = null;
+        render(); preview();
+        $('statusText').innerText = '已清空';
+    };
+
+    $('singleGenBtn').onclick = async () => {
+        if (!sel || proc) return;
+        const o = list.find(i => i.id === sel);
+        if (!o) return;
+        proc = true;
+        $('singleGenBtn').disabled = $('batchGenBtn').disabled = true;
+        $('statusText').innerText = '生成中...';
+        try {
+            const b = await gen(o.img, badge);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(b);
+            a.download = `FBL定制_${badge !== 'none' ? BADGE_DATA[badge].name + '_' : ''}${o.name.replace(/\.[^.]+$/, '')}.png`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            $('statusText').innerText = `完成 ${(b.size/1048576).toFixed(2)}MB`;
+        } catch (err) {
+            console.error('生成失败:', err);
+            $('statusText').innerText = '生成失败';
+        } finally {
+            proc = false;
+            render();
+        }
+    };
+
+    $('batchGenBtn').onclick = async () => {
+        if (!list.length || proc) return;
+        proc = true;
+        $('singleGenBtn').disabled = $('batchGenBtn').disabled = true;
+        $('progressWrap').style.display = 'block';
+        const zip = new JSZip();
+        for (let i = 0; i < list.length; i++) {
+            try {
+                const b = await gen(list[i].img, badge);
+                zip.file(`FBL定制_${badge !== 'none' ? BADGE_DATA[badge].name + '_' : ''}${list[i].name.replace(/\.[^.]+$/, '')}.png`, b);
+            } catch (err) {
+                console.error('批量生成失败:', err);
+            }
+            $('progressFill').style.width = ((i + 1) / list.length * 100) + '%';
+        }
+        const zb = await zip.generateAsync({type: 'blob'});
+        saveAs(zb, `FBL定制_${Date.now()}.zip`);
+        $('progressWrap').style.display = 'none';
+        $('statusText').innerText = `完成 ${list.length}张`;
+        proc = false;
+        render();
+    };
+
+    loadBadges();
+    preview();
+})();
+    </script>
+</body>
+</html>
